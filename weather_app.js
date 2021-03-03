@@ -1,17 +1,21 @@
 const input = document.getElementById("city");
 const mainDiv = document.getElementsByClassName("weather-info")[0];
-let userInput = "";
-let latitude;
-let longitude;
+const inputDiv = document.getElementById("input-div");
 
+// handling the user input for city names
+let userInput = "";
 function onChange(event) {
   userInput = event.target.value;
 }
 
+// handling the temp conversion into celcius
 function convertTemperatureIntoCelcius(x) {
   return `${Math.round(x - 273.15)}°`;
 }
 
+// handling the current user location, getting coordinates and saving them in variables for later use
+let latitude;
+let longitude;
 async function geoFindMe() {
   const status = document.getElementById("geo-status");
   const mapLink = document.getElementById("map-link");
@@ -39,10 +43,16 @@ async function geoFindMe() {
     navigator.geolocation.getCurrentPosition(success, error);
   }
 }
-geoFindMe();
 
+// window.onload, the app detects the user location and show weather accordingly
+window.addEventListener("load", function () {
+  geoFindMe();
+  inputDiv.style.display = "none";
+});
+
+// getting the user input and on clicking the show button shows current weather
 function renderForCity() {
-  document.getElementById("input-div").style.display = "block";
+  inputDiv.style.display = "block";
   document.getElementById("weather-data").style.display = "none";
   input.addEventListener("input", onChange);
   document
@@ -50,34 +60,39 @@ function renderForCity() {
     .addEventListener("click", showCurrentWeather);
 }
 
-function renderElements(response) {
-  document.getElementById("weather-data").style.display = "block";
-  mainDiv.style.display = "block";
-  const mapLink = document.getElementById("map-link");
-  mapLink.href = `https://www.openstreetmap.org/#map=18/${latitude}/${longitude}`;
-  mapLink.textContent = `Geolocation`;
-  const anotherCityButton = document.createElement("button");
-  anotherCityButton.textContent = "Add another city";
-  anotherCityButton.addEventListener("click", renderForCity);
-  anotherCityButton.setAttribute("id", "another-city");
-  mainDiv.appendChild(anotherCityButton);
+// rendering dynamically header section
+function headerSection(response) {
   const city = document.createElement("h2");
   city.innerText = `${response.name}`;
   mainDiv.appendChild(city);
   const icon = document.createElement("h4");
   icon.innerText = `${response.weather[0].main}`;
   mainDiv.appendChild(icon);
+  const iconImg = document.createElement("img");
+  Object.assign(iconImg, {
+    className: "weather-icon",
+    src: `http://openweathermap.org/img/wn/${response.weather[0].icon}@2x.png`,
+  });
+  const src = `http://openweathermap.org/img/wn/${response.weather[0].icon}@2x.png`;
+  document.body.style.backgroundImage = `url(${src})`;
+  mainDiv.appendChild(iconImg);
   const temp = document.createElement("h1");
-  temp.innerText = convertTemperatureIntoCelcius(response.main.temp);
+  temp.innerText = getCurrentTemp(response);
   mainDiv.appendChild(temp);
 
   const hrElement = document.createElement("hr");
   mainDiv.appendChild(hrElement);
+}
 
+const getCurrentTemp = (response) =>
+  convertTemperatureIntoCelcius(response.main.temp);
+
+// rendering dynamically description section
+function descriptionSection(response) {
   const paragraph = document.createElement("p");
   const description = `Today: ${
     response.weather[0].description
-  } currently. It's ${temp.innerText}, 
+  } currently. It's ${getCurrentTemp(response)}, 
             the high today was forecast as ${convertTemperatureIntoCelcius(
               response.main.temp_max
             )} and 
@@ -88,12 +103,15 @@ function renderElements(response) {
   mainDiv.appendChild(paragraph);
   const hrElement2 = document.createElement("hr");
   mainDiv.appendChild(hrElement2);
+}
 
+// rendering dynamically info section
+function infoSection(response) {
   const infoDiv = document.createElement("div");
   mainDiv.appendChild(infoDiv);
 
   const currentTemp = document.createElement("h3");
-  currentTemp.innerText = `Current temperature: ${temp.innerText}`;
+  currentTemp.innerText = `Current temperature: ${getCurrentTemp(response)}`;
   infoDiv.appendChild(currentTemp);
   const feelsLike = document.createElement("h3");
   feelsLike.innerText = `Feels like: ${convertTemperatureIntoCelcius(
@@ -109,7 +127,7 @@ function renderElements(response) {
   const minTemp = document.createElement("h3");
   minTemp.innerText = `Minimum today: ${convertTemperatureIntoCelcius(
     response.main.temp_min
-  )}°`;
+  )}`;
   infoDiv.appendChild(minTemp);
 
   const sunrise = document.createElement("h3");
@@ -146,12 +164,33 @@ function renderElements(response) {
   infoDiv.classList.add("infoDiv");
 }
 
-function addOneZero(hour) {
-  return hour < 10 ? "0" + hour : hour;
+// rendering all the weather information, taking the api response as input
+function renderElements(response) {
+  document.getElementById("weather-data").style.display = "block";
+  mainDiv.style.display = "block";
+  const mapLink = document.getElementById("map-link");
+  mapLink.href = `https://www.openstreetmap.org/#map=18/${latitude}/${longitude}`;
+  mapLink.textContent = `Geolocation`;
+
+  // creating the button for taking user input
+  const anotherCityButton = document.createElement("button");
+  anotherCityButton.textContent = "Add another city";
+  anotherCityButton.addEventListener("click", renderForCity);
+  anotherCityButton.setAttribute("id", "another-city");
+  mainDiv.appendChild(anotherCityButton);
+
+  headerSection(response);
+  descriptionSection(response);
+  infoSection(response);
 }
 
+function addOneZero(time) {
+  return time < 10 ? "0" + time : time;
+}
+
+// calling api either by city name or coordinates
 function showCurrentWeather() {
-  document.getElementById("input-div").style.display = "none";
+  inputDiv.style.display = "none";
   if (userInput !== "") {
     fetch(
       `https://api.openweathermap.org/data/2.5/weather?q=${userInput}&appid=a1d744b03825e0abb2904f3057933962`
